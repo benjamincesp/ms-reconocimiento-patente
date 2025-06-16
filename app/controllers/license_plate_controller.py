@@ -1,20 +1,34 @@
 from flask import request, jsonify
-from ..services.license_plate_service import LicensePlateService
 from ..services.gcp_vision_service import GCPVisionService
 from ..services.database_service import DatabaseService
 from ..utils.validators import FileValidator
+from ..config.settings import Config
+
+# Try to import OpenCV-dependent services
+try:
+    from ..services.license_plate_service import LicensePlateService
+    OPENCV_AVAILABLE = True
+except ImportError:
+    OPENCV_AVAILABLE = False
 
 
 class LicensePlateController:
     
     def __init__(self):
-        self.license_plate_service = LicensePlateService()
+        if OPENCV_AVAILABLE:
+            self.license_plate_service = LicensePlateService()
+        else:
+            self.license_plate_service = None
         self.gcp_vision_service = GCPVisionService()
         self.database_service = DatabaseService()
         self.file_validator = FileValidator()
     
     def detect_license_plate(self):
         try:
+            # In Heroku, redirect v1 to v2 (GCP Vision only)
+            if Config.IS_HEROKU or not OPENCV_AVAILABLE:
+                return self.detect_license_plate_v2()
+            
             validation_result = self.file_validator.validate_image_upload(request)
             if not validation_result['valid']:
                 return jsonify({

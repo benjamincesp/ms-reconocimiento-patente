@@ -6,6 +6,9 @@ class Config:
     HOST = os.getenv('HOST', '0.0.0.0')
     PORT = int(os.getenv('PORT', 5001))
     
+    # Environment detection
+    IS_HEROKU = 'DYNO' in os.environ
+    
     
 class OCRConfig:
     TESSERACT_CMD = os.getenv('TESSERACT_CMD', None)

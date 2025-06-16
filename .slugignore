@@ -1,5 +1,5 @@
 *.md
-*.txt
+requirements-dev.txt
 !requirements.txt
 !Procfile
 .git/

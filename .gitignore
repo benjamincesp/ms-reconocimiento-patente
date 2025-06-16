@@ -96,3 +96,7 @@ Thumbs.db
 
 # Docker
 *.dockerignore
+
+# Claude Code
+CLAUDE.md
+.claude/

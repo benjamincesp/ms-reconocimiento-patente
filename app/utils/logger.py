@@ -39,3 +39,8 @@ class AppLogger:
     @staticmethod
     def log_warning(message: str):
         print(f"⚠️  {message}")
+
+
+def get_logger(name: str):
+    """Get a logger instance for the given name"""
+    return AppLogger.setup_logger(name)

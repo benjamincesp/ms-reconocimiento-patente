@@ -14,8 +14,8 @@ def create_api_routes():
         return health_controller.health_check()
     
     @api_bp.route('/detect-license-plate/v2', methods=['POST'])
-    def detect_license_plate():
-        return license_plate_controller.detect_license_plate()
+    def detect_license_plate_v2():
+        return license_plate_controller.detect_license_plate_v2()
     
     @api_bp.route('/detect-license-plate/v1', methods=['POST'])
     def detect_license_plate_v1():

@@ -1,4 +1,5 @@
 from flask import Flask
+from flask_cors import CORS
 import pytesseract
 from app.routes.api_routes import create_api_routes
 from app.config.settings import Config, OCRConfig, AppInfo
@@ -7,6 +8,9 @@ from app.services.ocr_service import OCRService
 
 def create_app():
     app = Flask(__name__)
+    
+    # Enable CORS for all routes
+    CORS(app, origins=["http://localhost:4200"])
     
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
     app.config['DEBUG'] = Config.DEBUG

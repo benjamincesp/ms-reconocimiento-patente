@@ -19,8 +19,11 @@ class LicensePlateController:
             if not validation_result['valid']:
                 return jsonify({
                     "placa": None, 
-                    "error": validation_result['error']
-                }), validation_result['status_code']
+                    "isOnDatabase": 0,
+                    "status": validation_result['status_code'],
+                    "error": validation_result['error'],
+                    "method": "opencv_tesseract"
+                }), 200
             
             file = request.files['image']
             image_bytes = file.read()
@@ -31,16 +34,39 @@ class LicensePlateController:
             
             if result.plate:
                 print(f"✅ Detection successful: {result.plate} (method: {result.processing_method})")
-                return jsonify({"placa": result.plate}), 200
+                
+                # Check if license plate exists in database
+                db_result = self.database_service.check_license_plate_exists(result.plate)
+                
+                is_on_database = 1 if db_result['exists'] else 0
+                status_code = 200 if db_result['exists'] else 404
+                
+                return jsonify({
+                    "placa": result.plate,
+                    "isOnDatabase": is_on_database,
+                    "status": status_code,
+                    "method": "opencv_tesseract"
+                }), 200
             else:
                 print(f"❌ No license plate detected (method: {result.processing_method})")
                 if result.error:
                     print(f"Error: {result.error}")
-                return jsonify({"placa": None}), 404
+                return jsonify({
+                    "placa": None,
+                    "isOnDatabase": 0,
+                    "status": 404,
+                    "method": "opencv_tesseract"
+                }), 200
             
         except Exception as e:
             print(f"❌ Controller error: {e}")
-            return jsonify({"placa": None, "error": "Internal server error"}), 500
+            return jsonify({
+                "placa": None, 
+                "isOnDatabase": 0,
+                "status": 500,
+                "error": "Internal server error",
+                "method": "opencv_tesseract"
+            }), 200
     
     def detect_license_plate_v2(self):
         """

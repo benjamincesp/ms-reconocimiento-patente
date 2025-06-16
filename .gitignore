@@ -100,3 +100,7 @@ Thumbs.db
 # Claude Code
 CLAUDE.md
 .claude/
+
+# Google Cloud Credentials  
+app/config/credentials/
+*.json

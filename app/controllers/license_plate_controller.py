@@ -1,6 +1,7 @@
 from flask import request, jsonify
 from ..services.license_plate_service import LicensePlateService
 from ..services.gcp_vision_service import GCPVisionService
+from ..services.database_service import DatabaseService
 from ..utils.validators import FileValidator
 
 
@@ -9,6 +10,7 @@ class LicensePlateController:
     def __init__(self):
         self.license_plate_service = LicensePlateService()
         self.gcp_vision_service = GCPVisionService()
+        self.database_service = DatabaseService()
         self.file_validator = FileValidator()
     
     def detect_license_plate(self):
@@ -63,21 +65,34 @@ class LicensePlateController:
             
             if license_plate:
                 print(f"✅ GCP Vision detection successful: {license_plate}")
+                
+                # Check if license plate exists in database
+                db_result = self.database_service.check_license_plate_exists(license_plate)
+                
+                is_on_database = 1 if db_result['exists'] else 0
+                status_code = 200 if db_result['exists'] else 404
+                
                 return jsonify({
                     "placa": license_plate,
+                    "isOnDatabase": is_on_database,
+                    "status": status_code,
                     "method": "gcp_vision"
                 }), 200
             else:
                 print(f"❌ No license plate detected with GCP Vision")
                 return jsonify({
                     "placa": None,
+                    "isOnDatabase": 0,
+                    "status": 404,
                     "method": "gcp_vision"
-                }), 404
+                }), 200
             
         except Exception as e:
             print(f"❌ Controller error (v2): {e}")
             return jsonify({
                 "placa": None, 
+                "isOnDatabase": 0,
+                "status": 500,
                 "error": "Internal server error",
                 "method": "gcp_vision"
-            }), 500
+            }), 200

@@ -11,17 +11,26 @@ logger = get_logger(__name__)
 
 class GCPVisionService:
     def __init__(self):
-        self.api_key = "copec-462414-cad89218ad0f"
+        self.credentials_path = "app/config/credentials/copec-462414-cad89218ad0f.json"
         self.client = self._initialize_client()
     
     def _initialize_client(self) -> vision.ImageAnnotatorClient:
-        """Initialize Google Cloud Vision client with API key"""
+        """Initialize Google Cloud Vision client with service account"""
         try:
-            # Initialize client with API key
-            client = vision.ImageAnnotatorClient(
-                client_options={"api_key": self.api_key}
-            )
-            logger.info("GCP Vision client initialized successfully")
+            # Check if credentials file exists
+            if os.path.exists(self.credentials_path):
+                # Initialize client with service account credentials file
+                credentials = service_account.Credentials.from_service_account_file(
+                    self.credentials_path
+                )
+                client = vision.ImageAnnotatorClient(credentials=credentials)
+                logger.info("GCP Vision client initialized successfully with service account file")
+            else:
+                # Fallback to environment variables or default credentials
+                # Set GOOGLE_APPLICATION_CREDENTIALS environment variable
+                client = vision.ImageAnnotatorClient()
+                logger.info("GCP Vision client initialized with default credentials")
+            
             return client
         except Exception as e:
             logger.error(f"Failed to initialize GCP Vision client: {str(e)}")
@@ -109,16 +118,24 @@ class GCPVisionService:
             
             # Chilean license plate patterns
             patterns = [
+                # Current format with spaces: LL DD-NN (like "JG DJ-66")
+                r'[A-Z]{2}\s+[A-Z]{2}-\d{2}',
+                # Current format: LL-NN-NN (2 letters + hyphen + 2 numbers + hyphen + 2 numbers)
+                r'[A-Z]{2}-\d{2}-\d{2}',
                 # New format: LLLL·NN (4 letters + dot + 2 numbers)
                 r'[A-Z]{4}[·•.]\d{2}',
                 # Old format: LL·NNNN (2 letters + dot + 4 numbers)  
                 r'[A-Z]{2}[·•.]\d{4}',
-                # Alternative formats without dot
+                # Alternative formats without separators
                 r'[A-Z]{4}\s*\d{2}',
                 r'[A-Z]{2}\s*\d{4}',
                 # With spaces between characters
                 r'[A-Z]\s*[A-Z]\s*[A-Z]\s*[A-Z]\s*[·•.]?\s*\d\s*\d',
-                r'[A-Z]\s*[A-Z]\s*[·•.]?\s*\d\s*\d\s*\d\s*\d'
+                r'[A-Z]\s*[A-Z]\s*[·•.]?\s*\d\s*\d\s*\d\s*\d',
+                # With hyphens and spaces (flexible)
+                r'[A-Z]\s*[A-Z]\s*-?\s*\d\s*\d\s*-?\s*\d\s*\d',
+                # More flexible pattern for spaced format
+                r'[A-Z]{2}\s+[A-Z]{2}\s*-\s*\d{2}'
             ]
             
             for pattern in patterns:
@@ -133,6 +150,8 @@ class GCPVisionService:
                     
                     # Validate format
                     if self._validate_chilean_license_plate(license_plate):
+                        # Remove hyphens and spaces from final result
+                        license_plate = license_plate.replace('-', '').replace(' ', '')
                         return license_plate
             
             return None
@@ -152,8 +171,16 @@ class GCPVisionService:
             True if valid Chilean format, False otherwise
         """
         try:
-            # Remove dots for validation
-            clean_plate = plate.replace('.', '')
+            # Current format with spaces: LL DD-NN (like "JG DJ-66")
+            if re.match(r'^[A-Z]{2}\s+[A-Z]{2}-\d{2}$', plate):
+                return True
+            
+            # Current format: LL-NN-NN (2 letters + hyphen + 2 numbers + hyphen + 2 numbers)
+            if re.match(r'^[A-Z]{2}-\d{2}-\d{2}$', plate):
+                return True
+            
+            # Remove dots, hyphens and spaces for other validations
+            clean_plate = plate.replace('.', '').replace('-', '').replace(' ', '')
             
             # New format: 4 letters + 2 numbers
             if len(clean_plate) == 6 and clean_plate[:4].isalpha() and clean_plate[4:].isdigit():
